@@ -61,6 +61,7 @@ from .mirror_leech_utils.gdrive_utils.list import GoogleDriveList
 from .mirror_leech_utils.rclone_utils.list import RcloneList
 from .mirror_leech_utils.status_utils.ffmpeg_status import FFmpegStatus
 from .mirror_leech_utils.status_utils.sevenz_status import SevenZStatus
+from .mirror_leech_utils.status_utils.split_status import SplitStatus
 from .telegram_helper.bot_commands import BotCommands
 from .telegram_helper.message_utils import (
     get_tg_link_message,
@@ -112,6 +113,7 @@ class TaskConfig:
         self.size = 0
         self.subsize = 0
         self.proceed_count = 0
+        self.split_processed = 0
         self.is_leech = False
         self.is_yt = False
         self.is_qbit = False
@@ -1236,9 +1238,13 @@ class TaskConfig:
                     if f_size > self.split_size:
                         self.files_to_proceed[f_path] = [f_size, file_]
         if self.files_to_proceed:
-            ffmpeg = FFMpeg(self)
-            async with task_dict_lock:
-                task_dict[self.mid] = FFmpegStatus(self, ffmpeg, gid, "Split")
+            if Config.LEECH_TRUE_BYTE_SPLIT:
+                async with task_dict_lock:
+                    task_dict[self.mid] = SplitStatus(self, gid)
+            else:
+                ffmpeg = FFMpeg(self)
+                async with task_dict_lock:
+                    task_dict[self.mid] = FFmpegStatus(self, ffmpeg, gid, "Split")
             LOGGER.info(f"Splitting: {self.name}")
             for f_path, (f_size, file_) in self.files_to_proceed.items():
                 self.proceed_count += 1
@@ -1252,7 +1258,10 @@ class TaskConfig:
                     split_size = (f_size // parts) + (f_size % parts)
                 else:
                     split_size = self.split_size
-                if not self.as_doc and (await get_document_type(f_path))[0]:
+                if Config.LEECH_TRUE_BYTE_SPLIT:
+                    self.progress = True
+                    res = await split_file(f_path, split_size, self)
+                elif not self.as_doc and (await get_document_type(f_path))[0]:
                     self.progress = True
                     res = await ffmpeg.split(f_path, file_, parts, split_size)
                 else:

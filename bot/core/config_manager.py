@@ -92,6 +92,7 @@ class Config:
     LEECH_SUFFIX = ""
     LEECH_FONT = ""
     LEECH_SPLIT_SIZE = 2097152000
+    LEECH_TRUE_BYTE_SPLIT = False
     MEDIA_GROUP = False
     USE_HYPER = True
     HYPER_THREADS = 0

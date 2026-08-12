@@ -277,16 +277,31 @@ async def split_file(f_path, split_size, listener):
     out_path = f"{f_path}."
     if listener.is_cancelled:
         return False
-    # pread parallel split
+    # ponytail: split --verbose prints one "creating file 'X'" line per part
+    # to stdout, which we use to track byte-split progress.
+    listener.split_processed = 0
     listener.subproc = await create_subprocess_exec(
         "split",
         "--numeric-suffixes=1",
         "--suffix-length=3",
+        "--verbose",
         f"--bytes={split_size}",
         f_path,
         out_path,
+        stdout=PIPE,
         stderr=PIPE,
     )
+    while not listener.is_cancelled:
+        try:
+            line = await wait_for(listener.subproc.stdout.readline(), 60)
+        except Exception:
+            break
+        if not line:
+            break
+        listener.split_processed = min(
+            listener.split_processed + split_size, listener.subsize
+        )
+        await sleep(0.05)
     _, stderr = await listener.subproc.communicate()
     code = listener.subproc.returncode
     if listener.is_cancelled:

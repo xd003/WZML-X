@@ -167,6 +167,10 @@ UPSTREAM_REPO = ""
 UPSTREAM_BRANCH = "master"
 # Leech
 LEECH_SPLIT_SIZE = 0
+# Split leeched videos as true byte-splits (movie.mkv.001/002...) instead of
+# ffmpeg remuxed parts (movie.part001.mkv). True byte-splits concatenate back
+# into the exact original file (compatible with Stremio-style joiners).
+LEECH_TRUE_BYTE_SPLIT = False
 AS_DOCUMENT = False
 EQUAL_SPLITS = False
 MEDIA_GROUP = False
